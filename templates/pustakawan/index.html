@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header Dashboard -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Dashboard Pustakawan</h1>
+            <p class="text-slate-500 text-sm">Kelola stok koleksi buku dan verifikasi pengembalian pinjaman.</p>
+        </div>
+        <button onclick="toggleModal('modalTambah')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow text-sm transition">
+            + Tambah Buku Baru
+        </button>
+    </div>
+
+    <!-- Layout Grid 2 Kolom -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        <!-- Tabel Inventaris Buku -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border p-5">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Koleksi Buku</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b text-slate-600 text-xs uppercase tracking-wider">
+                            <th class="p-3">Judul Buku</th>
+                            <th class="p-3">Penulis</th>
+                            <th class="p-3">Kategori</th>
+                            <th class="p-3 text-center">Stok</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y text-sm">
+                        {% for book in books %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-medium text-slate-900">{{ book.title }}</td>
+                            <td class="p-3 text-slate-600">{{ book.author }}</td>
+                            <td class="p-3"><span class="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded">{{ book.category }}</span></td>
+                            <td class="p-3 text-center">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-emerald-100 text-emerald-700' if book.stock > 0 else 'bg-red-100 text-red-700' }}">
+                                    {{ book.stock }}
+                                </span>
+                            </td>
+                            <td class="p-3 text-center">
+                                <form action="{{ url_for('hapus_buku', id=book.id) }}" method="POST" onsubmit="return confirmHapus('{{ book.title }}');" class="inline">
+                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium text-xs">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabel Riwayat Peminjaman & Verifikasi -->
+        <div class="bg-white rounded-xl shadow-sm border p-5">
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Status Peminjaman</h2>
+            <div class="space-y-4 max-h-[500px] overflow-y-auto">
+                {% for loan in loans %}
+                <div class="p-3 border rounded-lg bg-slate-50 flex flex-col justify-between space-y-2">
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <span class="font-bold text-slate-800 text-sm">{{ loan.title }}</span>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded {{ 'bg-amber-100 text-amber-700' if loan.status == 'dipinjam' else 'bg-emerald-100 text-emerald-700' }}">
+                                {{ loan.status | capitalize }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Peminjam: <strong>{{ loan.username }}</strong></p>
+                        <p class="text-xs text-slate-400">Tgl Pinjam: {{ loan.borrow_date }}</p>
+                    </div>
+
+                    {% if loan.status == 'dipinjam' %}
+                    <form action="{{ url_for('verifikasi_kembali', loan_id=loan.id) }}" method="POST" class="pt-2">
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-1.5 rounded font-medium transition">
+                            Verifikasi Kembalikan
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-slate-400 text-sm text-center py-4">Belum ada transaksi peminjaman.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal Tambah Buku -->
+<div id="modalTambah" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-xl relative m-4">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Tambah Buku Baru</h3>
+        <form action="{{ url_for('tambah_buku') }}" method="POST" class="space-y-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Judul Buku</label>
+                <input type="text" name="title" required class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Penulis</label>
+                <input type="text" name="author" required class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
+                <input type="text" name="category" required class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Stok</label>
+                <input type="number" name="stock" min="1" value="1" required class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end space-x-2 pt-4">
+                <button type="button" onclick="toggleModal('modalTambah')" class="px-4 py-2 border rounded-lg text-sm text-slate-600 hover:bg-slate-100">Batal</button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">Simpan Buku</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.toggle('hidden');
+        modal.classList.toggle('flex');
+    }
+
+    function confirmHapus(title) {
+        return confirm(`Apakah Anda yakin ingin menghapus buku "${title}" dari katalog?`);
+    }
+</script>
+{% endblock %}
